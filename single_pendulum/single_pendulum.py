@@ -67,7 +67,7 @@ def vector_field(system_states: torch.Tensor) -> torch.Tensor:
     return derivatives
 
 # Monte Carlo sampling for the single pendulum
-def monte_carlo_sampling(q_range=(-torch.pi, torch.pi), p_range=(-10, 10), num_samples=1000) -> dict:
+def monte_carlo_sampling(q_range=(-torch.pi, torch.pi), p_range=(-1, 1), num_samples=1000) -> dict:
     """
     Generate training data for a Neural Network using Monte Carlo sampling.
 
