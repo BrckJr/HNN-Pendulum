@@ -81,20 +81,25 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
             X_measured = double_pendulum.monte_carlo_sampling(num_samples=500)['states']
             H_measured = hamiltonian(X_measured)
 
-            model = HNN.HNN(input_dim=4, hidden_dim=256, output_dim=1) # Use the HNN as model
+            model = HNN.HNN(input_dim=4, hidden_dim=512, output_dim=1) # Use the HNN as model
+            """
             loss_history = HNN_utils.train_hnn(
                 model=model,
-                num_epochs=1000,
+                num_epochs=10000,
                 X_train=X_train,
                 Y_train=Y_train,
                 X_measured=X_measured,
                 H_measured=H_measured
             )
+            torch.save(model.state_dict(),"HNN/HNN_model.pth")  # Only save the learned parameters
+            """
+            # Load the trained model
+            model.load_state_dict(torch.load("HNN/HNN_model.pth"))
         case _:
             raise ValueError(f"{selected_model} is not a known solver.")
 
     # Plot loss function over the training epochs
-    utils.plot_losses(loss_history, selected_model)
+    # utils.plot_losses(loss_history, selected_model)
 
     # Use the trained network and solve with leapfrog solver
     # model.eval()
@@ -110,7 +115,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
 
 if __name__ == '__main__':
     # Set the numerical solver for solving the known PDE
-    use_solver = "Explicit Euler" # Alternatives: "Symplectic Euler" or "Leapfrog"
+    use_solver = "Symplectic Euler" # Alternatives: "Symplectic Euler" or "Leapfrog"
 
     # Numerically solve the known PDE with the selected solver
     solve_numerically(use_solver)
