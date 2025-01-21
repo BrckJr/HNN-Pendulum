@@ -1,18 +1,22 @@
 import torch
 import torch.nn as nn
 
-def get_vector_field(model: nn.Module, y: torch.Tensor) -> torch.Tensor:
+def get_vector_field(model: nn.Module, y: torch.Tensor, device: torch.device) -> torch.Tensor:
     """
     Calculate the derivatives for the points in the phase state based on the trained HNN.
 
     Args:
         model (nn.Module): Trained Hamiltonian Neural Network (HNN).
         y (torch.Tensor): Current state, a tensor of shape (4) containing [q1, q2, p1, p2].
+        device (torch.device): The device on which the computation will be performed.
 
     Returns:
         torch.Tensor: Tensor of shape (4) containing [dq1/dt, dq2/dt, dp1/dt, dp2/dt].
     """
-    y = y.detach().clone().requires_grad_(True)
+    y = y.to(device).detach().clone().requires_grad_(True)
+    model = model.to(device)
+
+    model.eval()
     H = model(y)
 
     grad_H = torch.autograd.grad(H, y, grad_outputs=torch.ones_like(H), create_graph=True)[0]
@@ -25,39 +29,48 @@ def get_vector_field(model: nn.Module, y: torch.Tensor) -> torch.Tensor:
 
     return torch.stack([q1_dot_pred, q2_dot_pred, p1_dot_pred, p2_dot_pred])
 
-
-def step(func, y: torch.Tensor, h: float) -> torch.Tensor:
+def step(func, func_type: str,  y: torch.Tensor, h: float, device: torch.device) -> torch.Tensor:
     """
     Perform a single step of the Leapfrog method.
 
     Args:
         func (Union[nn.Module, Callable]): Function or model that computes the time derivatives (vector field).
+        func_type (str): Either "HNN", "FFNN" or "_" for vector_field
         y (torch.Tensor): Current state, a tensor of shape (4) containing [q1, q2, p1, p2].
         h (float): Step size.
+        device (torch.device): The device on which the computation will be performed.
 
     Returns:
         torch.Tensor: Updated state, a tensor of shape (4).
     """
+    y = y.to(device)
+
     # Split state into positions and momenta
     q = y[:2]  # Positions [q1, q2]
     p = y[2:]  # Momenta [p1, p2]
 
-    # Compute half-step momentum update
-    if isinstance(func, nn.Module):
-        derivatives = get_vector_field(func, y)  # Get derivatives for current state from the trained model
+    if func_type == 'HNN':
+        derivatives = get_vector_field(func, y, device)  # Get derivatives for current state from the trained model
+    elif func_type == 'FFNN':
+        with torch.no_grad():
+            derivatives = func(y) # Get derivatives for current state from the trained model
     else:
         derivatives = func(y)  # Get derivatives for current state from known vector field
 
+    # Compute half-step momentum update
     p_half = p + 0.5 * h * derivatives[2:]
 
     # Update positions using half-step momentum
-    q_next = q + h * func(torch.cat((q, p_half)))[:2]
+    q_next = q + h * func(torch.cat((q, p_half)).to(device))[:2]
 
     # Compute full-step momentum update
-    if isinstance(func, nn.Module):
-        derivatives_next = get_vector_field(func, torch.cat((q_next, p_half)))  # Compute full-step momentum update with the trained model
+    if func_type == "HNN":
+        derivatives_next = get_vector_field(func, torch.cat((q_next, p_half)), device)  # Get derivatives for current state from the trained model
+    elif func_type == "FFNN":
+        with torch.no_grad():
+            derivatives_next = func(torch.cat((q_next, p_half)).to(device))
     else:
-        derivatives_next = func(torch.cat((q_next, p_half)))  # Compute full-step momentum update with known vector field
+        derivatives_next = func(torch.cat((q_next, p_half)).to(device))  # Get derivatives for current state from known vector field
 
     p_next = p_half + 0.5 * h * derivatives_next[2:]
 
@@ -66,16 +79,17 @@ def step(func, y: torch.Tensor, h: float) -> torch.Tensor:
 
     return y_next
 
-
-def solve(func, y0: torch.Tensor, t_span: tuple, h: float = 0.01) -> tuple:
+def solve(func, func_type: str, y0: torch.Tensor, t_span: tuple, h: float = 0.01, device: torch.device = torch.device("cpu")) -> tuple:
     """
     Solve the system of ODEs using the Leapfrog method.
 
     Args:
         func (Union[nn.Module, Callable]): Function or model that computes the time derivatives (vector field).
+        func_type (str): Either "HNN", "FFNN" or "Numerical"
         y0 (torch.Tensor): Initial state, a tensor of shape (4) containing [q1, q2, p1, p2].
         t_span (tuple): A tuple (t_start, t_end) defining the time interval.
         h (float, optional): Step size. Defaults to 0.01.
+        device (torch.device, optional): The device on which the computation will be performed. Defaults to "cpu".
 
     Returns:
         tuple: A tuple containing:
@@ -84,7 +98,7 @@ def solve(func, y0: torch.Tensor, t_span: tuple, h: float = 0.01) -> tuple:
     """
     t_start, t_end = t_span
     t = t_start
-    y = y0.clone().detach()
+    y = y0.clone().detach().to(device)
 
     t_values = [t]
     y_values = [y.clone().detach()]
@@ -95,11 +109,11 @@ def solve(func, y0: torch.Tensor, t_span: tuple, h: float = 0.01) -> tuple:
             h = t_end - t
 
         # Perform a single Leapfrog step
-        y = step(func, y, h)
+        y = step(func, func_type, y, h, device)
         t += h
 
         # Store the results
         t_values.append(t)
-        y_values.append(y.clone().detach())
+        y_values.append(y.clone().detach().cpu())
 
     return torch.tensor(t_values, dtype=torch.float32), torch.stack(y_values)

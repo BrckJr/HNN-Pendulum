@@ -43,7 +43,7 @@ def solve_numerically(selected_solver: str) -> None:
             raise ValueError(f"{selected_solver} is not a known solver.")
 
     # Solve PDE for initial state Y0 and time span t_span
-    t_values, y_values = func(double_pendulum.vector_field, Y0, T_SPAN)
+    t_values, y_values = func(double_pendulum.vector_field, '_', Y0, T_SPAN)
 
     # Plot the complete trajectory for the double pendulum over the whole time range
     utils.plot_positions_in_cartesian(t_values, y_values, selected_solver)
@@ -62,7 +62,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
         nn.Module: The trained model.
     """
 
-    data_samples = double_pendulum.monte_carlo_sampling(num_samples=1000)  # Generate training data
+    data_samples = double_pendulum.monte_carlo_sampling(num_samples=10000)  # Generate training data
     X_train, Y_train = data_samples['states'], data_samples['derivatives']  # Y_train is only used for the FFNN
 
     print(f"\n --- Start Training of {selected_model} --- \n")
@@ -78,14 +78,14 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
             )
         case "HNN":
             # Simulate "measuring" of data points for the supervised (data) loss
-            X_measured = double_pendulum.monte_carlo_sampling(num_samples=500)['states']
+            X_measured = double_pendulum.monte_carlo_sampling(num_samples=50)['states']
             H_measured = hamiltonian(X_measured)
 
-            model = HNN.HNN(input_dim=4, hidden_dim=512, output_dim=1) # Use the HNN as model
+            model = HNN.HNN(input_dim=4, hidden_dim=1028, output_dim=1) # Use the HNN as model
             """
             loss_history = HNN_utils.train_hnn(
                 model=model,
-                num_epochs=10000,
+                num_epochs=5000,
                 X_train=X_train,
                 Y_train=Y_train,
                 X_measured=X_measured,
@@ -93,6 +93,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
             )
             torch.save(model.state_dict(),"HNN/HNN_model.pth")  # Only save the learned parameters
             """
+
             # Load the trained model
             model.load_state_dict(torch.load("HNN/HNN_model.pth"))
         case _:
@@ -102,8 +103,8 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
     # utils.plot_losses(loss_history, selected_model)
 
     # Use the trained network and solve with leapfrog solver
-    # model.eval()
-    t_values, y_values = leapfrog.solve(model, Y0, T_SPAN)
+    model.eval()
+    t_values, y_values = leapfrog.solve(model, selected_model, Y0, T_SPAN)
 
     # Plot the complete trajectory for the double pendulum over the whole time range
     utils.plot_positions_in_cartesian(t_values, y_values, f"{selected_model} with Leapfrog")
@@ -115,13 +116,13 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
 
 if __name__ == '__main__':
     # Set the numerical solver for solving the known PDE
-    use_solver = "Symplectic Euler" # Alternatives: "Symplectic Euler" or "Leapfrog"
+    use_solver = "Leapfrog" # Alternatives: "Symplectic Euler" or "Leapfrog"
 
     # Numerically solve the known PDE with the selected solver
     solve_numerically(use_solver)
 
     # Set the model to learn the Hamiltonian
-    use_model = "HNN" # Alternatives: "HNN", "FFNN"
+    use_model = "FFNN" # Alternatives: "HNN", "FFNN"
 
     # Learn the Hamiltonian and solve the learned PDE with the Leapfrog method
     trained_model = learn_hamiltonian_and_solve(use_model)
