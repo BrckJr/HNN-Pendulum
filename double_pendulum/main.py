@@ -68,6 +68,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
     match selected_model:
         case "FFNN":
             model = FFNN.FFNN(input_dim=4, hidden_dim=256, output_dim=4) # Use simple FFNN as model
+            """
             loss_history = FFNN_utils.train_ffnn(
                 model=model,
                 num_epochs=1000,
@@ -76,9 +77,10 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
                 device=device
             )
             torch.save(model.state_dict(),"FFNN/FFNN_model.pth")  # Only save the learned parameters
+            """
 
             # Load the trained model
-            # model.load_state_dict(torch.load("FFNN/FFNN_model.pth"))
+            model.load_state_dict(torch.load("FFNN/FFNN_model.pth"))
 
         case "HNN":
             # Simulate "measuring" of data points for the supervised (data) loss
@@ -127,7 +129,7 @@ if __name__ == '__main__':
     solve_numerically(use_solver)
 
     # Set the model to learn the Hamiltonian
-    use_model = "FFNN" # Alternatives: "HNN", "FFNN"
+    use_model = "HNN" # Alternatives: "HNN", "FFNN"
 
     # Learn the Hamiltonian and solve the learned PDE with the Symplectic Euler method
     trained_model = learn_hamiltonian_and_solve(use_model)

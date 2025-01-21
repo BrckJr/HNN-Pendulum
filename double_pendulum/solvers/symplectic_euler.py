@@ -54,6 +54,8 @@ def step(
     Returns:
         torch.Tensor: Updated state, a tensor of shape (4).
     """
+    y.to(device)
+
     if func_type == 'HNN':
         derivatives = get_vector_field(func, y, device)  # Get derivatives for current state from the trained model
     elif func_type == 'FFNN':
