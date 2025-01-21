@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 
-def get_vector_field(model: nn.Module, y: torch.Tensor) -> torch.Tensor:
+def get_vector_field(
+        model: nn.Module,
+        y: torch.Tensor
+) -> torch.Tensor:
     """
     Calculate the derivatives for the points in the phase space based on the trained HNN.
 
@@ -25,7 +28,12 @@ def get_vector_field(model: nn.Module, y: torch.Tensor) -> torch.Tensor:
 
     return torch.stack([q_dot_pred, p_dot_pred])
 
-def step(func, func_type: str, y: torch.Tensor, h: float) -> torch.Tensor:
+def step(
+        func,
+        func_type: str,
+        y: torch.Tensor,
+        h: float
+) -> torch.Tensor:
     """
     Perform a single step of the explicit Euler method.
 
@@ -55,7 +63,13 @@ def step(func, func_type: str, y: torch.Tensor, h: float) -> torch.Tensor:
     return y_next
 
 
-def solve(func, func_type: str, y0: torch.Tensor, t_span: tuple, h: float = 0.01) -> tuple:
+def solve(
+        func,
+        func_type: str,
+        y0: torch.Tensor,
+        t_span: tuple,
+        h: float = 0.01
+) -> tuple:
     """
     Solve the system of ODEs using the explicit Euler method.
 

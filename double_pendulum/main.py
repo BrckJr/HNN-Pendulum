@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
 
 import utils
 import constants
@@ -9,12 +8,13 @@ import double_pendulum
 import FFNN.FFNN as FFNN
 import FFNN.FFNN_utils as FFNN_utils
 import HNN.HNN as HNN
-import HNN.HNN_utils as HNN_utils
 
 import solvers.explicit_euler as explicit_euler
 import solvers.symplectic_euler as symplectic_euler
-import solvers.leapfrog as leapfrog
 from double_pendulum import hamiltonian
+
+# Automatically select the device (CUDA, MPS, or CPU)
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 # Convert initial state into a torch tensor
 Y0 = torch.tensor(constants.Y0, dtype=torch.float32)
@@ -25,7 +25,7 @@ def solve_numerically(selected_solver: str) -> None:
     Solve the PDE of the double pendulum numerically with a selected solver.
 
     Args:
-        selected_solver (str): Numerical solver to use. Options: "Explicit Euler", "Symplectic Euler", "Leapfrog"
+        selected_solver (str): Numerical solver to use. Options: "Explicit Euler", "Symplectic Euler"
 
     Returns:
         None
@@ -37,8 +37,6 @@ def solve_numerically(selected_solver: str) -> None:
             func = explicit_euler.solve
         case "Symplectic Euler":
             func = symplectic_euler.solve
-        case "Leapfrog":
-            func = leapfrog.solve
         case _:
             raise ValueError(f"{selected_solver} is not a known solver.")
 
@@ -53,7 +51,7 @@ def solve_numerically(selected_solver: str) -> None:
 
 def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
     """
-    Learn the Hamiltonian function from data and use the learned model to solve the PDE with the Leapfrog method.
+    Learn the Hamiltonian function from data and use the learned model to solve the PDE with the Symplectic Euler method.
 
     Args:
         selected_model (str): Model which should be used for learning the Hamiltonian
@@ -65,7 +63,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
     data_samples = double_pendulum.monte_carlo_sampling(num_samples=10000)  # Generate training data
     X_train, Y_train = data_samples['states'], data_samples['derivatives']  # Y_train is only used for the FFNN
 
-    print(f"\n --- Start Training of {selected_model} --- \n")
+    print(f"\n --- Start Using of {selected_model} --- \n")
 
     match selected_model:
         case "FFNN":
@@ -74,8 +72,14 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
                 model=model,
                 num_epochs=1000,
                 X=X_train,
-                Y=Y_train
+                Y=Y_train,
+                device=device
             )
+            torch.save(model.state_dict(),"FFNN/FFNN_model.pth")  # Only save the learned parameters
+
+            # Load the trained model
+            # model.load_state_dict(torch.load("FFNN/FFNN_model.pth"))
+
         case "HNN":
             # Simulate "measuring" of data points for the supervised (data) loss
             X_measured = double_pendulum.monte_carlo_sampling(num_samples=50)['states']
@@ -89,7 +93,8 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
                 X_train=X_train,
                 Y_train=Y_train,
                 X_measured=X_measured,
-                H_measured=H_measured
+                H_measured=H_measured,
+                device=device
             )
             torch.save(model.state_dict(),"HNN/HNN_model.pth")  # Only save the learned parameters
             """
@@ -102,21 +107,21 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
     # Plot loss function over the training epochs
     # utils.plot_losses(loss_history, selected_model)
 
-    # Use the trained network and solve with leapfrog solver
+    # Use the trained network and solve with Symplectic Euler solver
     model.eval()
-    t_values, y_values = leapfrog.solve(model, selected_model, Y0, T_SPAN)
+    t_values, y_values = symplectic_euler.solve(model, selected_model, Y0, T_SPAN)
 
     # Plot the complete trajectory for the double pendulum over the whole time range
-    utils.plot_positions_in_cartesian(t_values, y_values, f"{selected_model} with Leapfrog")
+    utils.plot_positions_in_cartesian(t_values, y_values, f"{selected_model} with Symplectic Euler")
 
     # Plot the Hamiltonian over time to see if it stays constant
-    utils.plot_hamiltonian_deviation_over_time(t_values, y_values, f"{selected_model} with Leapfrog")
+    utils.plot_hamiltonian_deviation_over_time(t_values, y_values, f"{selected_model} with Symplectic Euler")
 
     return model
 
 if __name__ == '__main__':
     # Set the numerical solver for solving the known PDE
-    use_solver = "Leapfrog" # Alternatives: "Symplectic Euler" or "Leapfrog"
+    use_solver = "Symplectic Euler" # Alternatives: "Symplectic Euler" and "Explicit Euler"
 
     # Numerically solve the known PDE with the selected solver
     solve_numerically(use_solver)
@@ -124,7 +129,7 @@ if __name__ == '__main__':
     # Set the model to learn the Hamiltonian
     use_model = "FFNN" # Alternatives: "HNN", "FFNN"
 
-    # Learn the Hamiltonian and solve the learned PDE with the Leapfrog method
+    # Learn the Hamiltonian and solve the learned PDE with the Symplectic Euler method
     trained_model = learn_hamiltonian_and_solve(use_model)
 
     if use_model == "HNN":

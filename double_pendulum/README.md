@@ -2,7 +2,7 @@
 The goal of this repository is to learn the Hamiltonian system of a double pendulum from data. 
 To do so, I implemented the following:
 1. The <code>double_pendulum.py</code> file which includes all the physics from the double pendulum
-2. Three numerical solvers (<code>explicit_euler.py</code>, <code>symplectic_euler.py</code> and <code>leapfrog.py</code>) to solve the known PDE directly and
+2. Three numerical solvers (<code>explicit_euler.py</code> and <code>symplectic_euler.py</code>) to solve the known PDE directly and
 to analyze the characteristics of these solvers (energy conservation, stability over time, ...)
 3. A standard feed-forward neural network (<code>FFNN.py</code> and <code>FFNN_utils.py</code>) which directly learns the gradients from data samples. The learned gradients
 are then used with the numerical solvers from the last step to solve the "learned PDE".

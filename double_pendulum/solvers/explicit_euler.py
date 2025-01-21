@@ -1,7 +1,11 @@
 import torch
 import torch.nn as nn
 
-def get_vector_field(model: nn.Module, y: torch.Tensor, device: torch.device) -> torch.Tensor:
+def get_vector_field(
+        model: nn.Module,
+        y: torch.Tensor,
+        device: torch.device
+) -> torch.Tensor:
     """
     Calculate the derivatives for the points in the phase state based on the trained HNN.
 
@@ -22,14 +26,21 @@ def get_vector_field(model: nn.Module, y: torch.Tensor, device: torch.device) ->
     grad_H = torch.autograd.grad(H, y, grad_outputs=torch.ones_like(H), create_graph=True)[0]
 
     # Extract predicted time derivatives using Hamilton's equations
-    q1_dot_pred = grad_H[0]   # ∂H/∂p1
-    q2_dot_pred = grad_H[1]   # ∂H/∂p2
-    p1_dot_pred = -grad_H[2]  # -∂H/∂q1
-    p2_dot_pred = -grad_H[3]  # -∂H/∂q2
+    q1_dot_pred = grad_H[2]
+    q2_dot_pred = grad_H[3]
+    p1_dot_pred = -grad_H[0]
+    p2_dot_pred = -grad_H[1]
 
     return torch.stack([q1_dot_pred, q2_dot_pred, p1_dot_pred, p2_dot_pred])
 
-def step(func, func_type: str,  y: torch.Tensor, h: float, device: torch.device) -> torch.Tensor:
+
+def step(
+        func,
+        func_type: str,
+        y: torch.Tensor,
+        h: float,
+        device: torch.device
+) -> torch.Tensor:
     """
     Perform a single step of the Leapfrog method.
 
@@ -62,7 +73,14 @@ def step(func, func_type: str,  y: torch.Tensor, h: float, device: torch.device)
     return y
 
 
-def solve(func, func_type: str, y0: torch.Tensor, t_span: tuple, h: float = 0.001, device: torch.device = torch.device("cpu")) -> tuple:
+def solve(
+        func,
+        func_type: str,
+        y0: torch.Tensor,
+        t_span: tuple,
+        h: float = 0.001,
+        device: torch.device = torch.device("cpu")
+) -> tuple:
     """
     Solve the system of ODEs using the explicit Euler method.
 
