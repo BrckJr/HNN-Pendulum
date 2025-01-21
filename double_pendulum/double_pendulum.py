@@ -27,15 +27,15 @@ def hamiltonian(system_states: torch.Tensor) -> torch.Tensor:
         q1, q2, p1, p2 = system_states[:, 0], system_states[:, 1], system_states[:, 2], system_states[:, 3]
 
     # Compute kinetic energy
-    numerator = (M2 * L2**2 * p1**2) + ((M1 + M2) * L1**2 * p2**2) - (2 * M1 * L1 * L2 * p1 * p2 * torch.cos(q1 - q2))
+    numerator = (M2 * L2**2 * p1**2) + ((M1 + M2) * L1**2 * p2**2) - (2 * M2 * L1 * L2 * p1 * p2 * torch.cos(q1 - q2))
     denominator = 2 * M2 * L1**2 * L2**2 * (M1 + (M2 * torch.sin(q1 - q2)**2))
     H_kin = numerator / denominator
 
     # Compute potential energy
-    H_pot = (M1 + M2) * G * L1 * torch.cos(q1) - M2 * G * L2 * torch.cos(q2)
+    H_pot = - (M1 + M2) * G * L1 * torch.cos(q1) - M2 * G * L2 * torch.cos(q2)
 
     # Hamiltonian as a summation of kinetic and potential energy
-    H = H_kin - H_pot
+    H = H_kin + H_pot
 
     return H
 
@@ -65,15 +65,15 @@ def vector_field(system_states: torch.Tensor) -> torch.Tensor:
     h1_denominator = (L1 * L2 * (M1 + (M2 * torch.sin(q1 - q2)**2)))
     h1 = h1_numerator / h1_denominator
 
-    h2_numerator = (M2 * L2**2 * p1**2) + ((M1 + M2) * L1**2 * p2**2) - (2 * M1 * L1 * L2 * p1 * p2 * torch.cos(q1 - q2))
+    h2_numerator = ((M2 * L2**2 * p1**2) + ((M1 + M2) * L1**2 * p2**2) - (2 * M2 * L1 * L2 * p1 * p2 * torch.cos(q1 - q2))) * torch.sin(2 * (q1 - q2))
     h2_denominator = 2 * L1**2 * L2**2 * (M1 + (M2 * torch.sin(q1 - q2)**2))**2
     h2 = h2_numerator / h2_denominator
 
     # Computation of Hamilton’s equations of motions
     dq1_dt = (L2 * p1 - L1 * p2 * torch.cos(q1 - q2)) / (L1**2 * L2 * (M1 + (M2 * torch.sin(q1 - q2)**2)))
     dq2_dt = (-M2 * L2 * p1 * torch.cos(q1 - q2) + ((M1 + M2) * L1 * p2)) / (M2 * L1 * L2**2 * (M1 + (M2 * torch.sin(q1 - q2)**2)))
-    dp1_dt = (-(M1 + M2) * G * L1 * torch.sin(q1)) - h1 + (h2 * torch.sin(2 * (q1 - q2)))
-    dp2_dt = (-M2 * G * L2 * torch.sin(q2)) + h1 - (h2 * torch.sin(2 * (q1 - q2)))
+    dp1_dt = (-(M1 + M2) * G * L1 * torch.sin(q1)) - h1 + h2
+    dp2_dt = (-M2 * G * L2 * torch.sin(q2)) + h1 - -h2
 
     # Combine derivatives into a single tensor
     derivatives = torch.stack([dq1_dt, dq2_dt, dp1_dt, dp2_dt], dim=-1)

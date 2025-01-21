@@ -27,7 +27,7 @@ def hamiltonian(system_states: torch.Tensor) -> torch.Tensor:
         q, p = system_states[:, 0], system_states[:, 1]
 
     # Kinetic energy (T = p^2 / 2M)
-    H_kin = p**2 / (2 * M)
+    H_kin = p**2 / (2 * M * L**2)
 
     # Potential energy (V = M * G * L * (1 - cos(q)))
     H_pot = M * G * L * (1 - torch.cos(q))
@@ -58,8 +58,8 @@ def vector_field(system_states: torch.Tensor) -> torch.Tensor:
         q, p = system_states[:, 0], system_states[:, 1]
 
     # Compute time derivatives from Hamilton's equations
-    dq_dt = p / M  # dq/dt = p / M
-    dp_dt = -M * G * L * torch.sin(q)  # dp/dt = -M * G * L * sin(q)
+    dq_dt = p / M  # dq/dt = dH_dp
+    dp_dt = -M * G * L * torch.sin(q) # dp_dt = - dH_dq
 
     # Combine derivatives into a single tensor
     derivatives = torch.stack([dq_dt, dp_dt], dim=-1)
