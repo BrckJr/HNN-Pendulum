@@ -10,5 +10,5 @@ G = 9.81           # Gravity constant
 # q2: Angle at which pendulum 2 is positioned relative to pendulum 1. q2=0 means pendulum 2 is vertically under pendulum 1
 # p1: Momentum in x direction
 # p2: Momentum in y direction
-Y0 = [0.4, 0.0, 0.0, 0.0]  # Initial conditions [q1, q2, p1, p2]
+Y0 = [0.8, 0.0, 0.0, 0.0]  # Initial conditions [q1, q2, p1, p2]
 T_SPAN = (0, 1)           # Time range for the simulation
