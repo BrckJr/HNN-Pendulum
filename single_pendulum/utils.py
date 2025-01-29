@@ -81,6 +81,7 @@ def plot_losses(loss_history: list, used_model: str):
     plt.grid(True)
     plt.show()
 
+
 def compare_hamiltonian_single_pendulum(model: nn.Module) -> None:
     """
     Compare true and learned Hamiltonian functions for a single pendulum system.
@@ -88,39 +89,25 @@ def compare_hamiltonian_single_pendulum(model: nn.Module) -> None:
     Args:
         model (nn.Module): Learned Hamiltonian.
     """
+    p_values = np.linspace(-np.pi, np.pi, 100)
+    q_values = np.linspace(-np.pi, np.pi, 100)
+    P, Q = np.meshgrid(p_values, q_values)
 
-    def plot_hamiltonian(ax, x, y, H, title, xlabel, ylabel, vmin, vmax):
-        """Plot a single Hamiltonian as a contour."""
-        contour = ax.contourf(x, y, H, levels=200, cmap="viridis", vmin=vmin, vmax=vmax)
-        plt.colorbar(contour, ax=ax)
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    P_flat = torch.tensor(P.flatten(), dtype=torch.float32)
+    Q_flat = torch.tensor(Q.flatten(), dtype=torch.float32)
 
-    test_size = 100
-    q_test = torch.linspace(-np.pi, np.pi, test_size)
-    p_test = torch.linspace(-2, 2, test_size)
+    system_states = torch.stack([Q_flat, P_flat], dim=1)
+    H_values = hamiltonian(system_states).reshape(100, 100).numpy()
 
-    # Generate a grid for (q, p) and flatten for Hamiltonian evaluation
-    Q, P = torch.meshgrid(q_test, p_test, indexing='ij')
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
 
-    # Flatten and stack into system states for the single pendulum
-    Q_flat, P_flat = Q.flatten(), P.flatten()
+    # Create interactive plot
+    surf = ax.plot_surface(Q, P, H_values, cmap='viridis')
 
-    system_state_test = torch.stack([Q_flat, P_flat], dim=1)
+    ax.set_xlabel('q')
+    ax.set_ylabel('p')
+    ax.set_zlabel('H')
+    ax.set_title('Hamiltonian Surface Plot')
 
-    # Compute true and learned Hamiltonians and reshape for plotting
-    H_true = hamiltonian(system_state_test).detach().numpy().reshape(test_size, test_size)
-    H_learned = model(system_state_test).detach().numpy().reshape(test_size, test_size)
-
-    # Determine global min and max for consistent scaling
-    vmin, vmax = min(H_true.min(), H_learned.min()) * 1.1, max(H_true.max(), H_learned.max()) * 1.1
-
-    # Plot results
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-
-    plot_hamiltonian(axes[0], Q.numpy(), P.numpy(), H_true, 'True Hamiltonian (q, p)', 'q', 'p', vmin, vmax)
-    plot_hamiltonian(axes[1], Q.numpy(), P.numpy(), H_learned, 'Learned Hamiltonian (q, p)', 'q', 'p', vmin, vmax)
-
-    plt.tight_layout()
     plt.show()

@@ -80,7 +80,7 @@ def learn_hamiltonian_and_solve(selected_model: str) -> nn.Module:
             model = HNN.HNN(input_dim=2, hidden_dim=64, output_dim=1) # Use the HNN as model
             loss_history = HNN_utils.train_hnn(
                 model=model,
-                num_epochs=200,
+                num_epochs=500,
                 X_train=X_train,
                 Y_train=Y_train,
                 X_measured=X_measured,
