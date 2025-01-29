@@ -1,8 +1,6 @@
-from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
 import constants
 from double_pendulum import hamiltonian
 
@@ -86,56 +84,6 @@ def plot_losses(loss_history: list, used_model: str):
     plt.title(f"Training Loss History for {used_model}")
     plt.legend()
     plt.grid(True)
-    plt.show()
-
-def compare_hamiltonian_double_pendulum(model: nn.Module) -> None:
-    """
-    Compare true and learned Hamiltonian functions for a double pendulum system.
-
-    Args:
-        model (nn.Module): Learned Hamiltonian.
-    """
-
-    def plot_hamiltonian(ax, x, y, H, title, xlabel, ylabel, vmin, vmax):
-        """Plot a single Hamiltonian as a contour."""
-        contour = ax.contourf(x, y, H, levels=200, cmap="viridis", vmin=vmin, vmax=vmax)
-        plt.colorbar(contour, ax=ax)
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-    test_size = 100
-    q1_test = torch.linspace(-np.pi, np.pi, test_size)
-    q2_test = torch.linspace(-np.pi, np.pi, test_size)
-    p1_test = torch.linspace(-2, 2, test_size)
-    p2_test = torch.linspace(-2, 2, test_size)
-
-    # Generate a grid for (q1, p1) and flatten for Hamiltonian evaluation
-    Q1, P1 = torch.meshgrid(q1_test, p1_test, indexing='ij')
-    Q2, P2 = torch.meshgrid(q2_test, p2_test, indexing='ij')
-
-    # Flatten and stack into system states for the double pendulum
-    Q1_flat, P1_flat = Q1.flatten(), P1.flatten()
-    Q2_flat, P2_flat = Q2.flatten(), P2.flatten()
-
-    system_state_test = torch.stack([Q1_flat, Q2_flat, P1_flat, P2_flat], dim=1)
-
-    # Compute true and learned Hamiltonians and reshape for plotting
-    H_true = hamiltonian(system_state_test).detach().numpy().reshape(test_size, test_size)
-    H_learned = model(system_state_test).detach().numpy().reshape(test_size, test_size)
-
-    # Determine global min and max for consistent scaling
-    vmin, vmax = min(H_true.min(), H_learned.min()) * 1.1, max(H_true.max(), H_learned.max()) * 1.1
-
-    # Plot results
-    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
-
-    plot_hamiltonian(axes[0, 0], Q1.numpy(), P1.numpy(), H_true, 'True Hamiltonian (q1, p1)', 'q1', 'p1', vmin, vmax)
-    plot_hamiltonian(axes[0, 1], Q1.numpy(), P1.numpy(), H_learned, 'Learned Hamiltonian (q1, p1)', 'q1', 'p1', vmin, vmax)
-    plot_hamiltonian(axes[1, 0], Q2.numpy(), P2.numpy(), H_true, 'True Hamiltonian (q2, p2)', 'q2', 'p2', vmin, vmax)
-    plot_hamiltonian(axes[1, 1], Q2.numpy(), P2.numpy(), H_learned, 'Learned Hamiltonian (q2, p2)', 'q2', 'p2', vmin, vmax)
-
-    plt.tight_layout()
     plt.show()
 
 

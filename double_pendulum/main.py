@@ -133,7 +133,3 @@ if __name__ == '__main__':
 
     # Learn the Hamiltonian and solve the learned PDE with the Symplectic Euler method
     trained_model = learn_hamiltonian_and_solve(use_model)
-
-    if use_model == "HNN":
-        # Plot the true and the learned Hamiltonian
-        utils.compare_hamiltonian_double_pendulum(trained_model)

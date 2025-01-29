@@ -1,4 +1,3 @@
-from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -89,7 +88,7 @@ def compare_hamiltonian_single_pendulum(model: nn.Module) -> None:
     Args:
         model (nn.Module): Learned Hamiltonian.
     """
-    p_values = np.linspace(-np.pi, np.pi, 100)
+    p_values = np.linspace(-1, 1, 100)
     q_values = np.linspace(-np.pi, np.pi, 100)
     P, Q = np.meshgrid(p_values, q_values)
 
@@ -97,17 +96,36 @@ def compare_hamiltonian_single_pendulum(model: nn.Module) -> None:
     Q_flat = torch.tensor(Q.flatten(), dtype=torch.float32)
 
     system_states = torch.stack([Q_flat, P_flat], dim=1)
-    H_values = hamiltonian(system_states).reshape(100, 100).numpy()
+    H_true = hamiltonian(system_states).reshape(100, 100).numpy()
+    H_learned = model(system_states).reshape(100, 100).detach().numpy()
 
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111, projection='3d')
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6), subplot_kw={"projection": "3d"})
 
-    # Create interactive plot
-    surf = ax.plot_surface(Q, P, H_values, cmap='viridis')
+    # Find global limits
+    h_min = min(H_true.min(), H_learned.min())
+    h_max = max(H_true.max(), H_learned.max())
 
-    ax.set_xlabel('q')
-    ax.set_ylabel('p')
-    ax.set_zlabel('H')
-    ax.set_title('Hamiltonian Surface Plot')
+    # True Hamiltonian Plot
+    ax1 = axes[0]
+    ax1.plot_surface(Q, P, H_true, cmap='viridis')
+    ax1.set_xlabel('q')
+    ax1.set_ylabel('p')
+    ax1.set_zlabel('H')
+    ax1.set_title('True Hamiltonian')
+
+    # Learned Hamiltonian Plot
+    ax2 = axes[1]
+    ax2.plot_surface(Q, P, H_learned, cmap='viridis')
+    ax2.set_xlabel('q')
+    ax2.set_ylabel('p')
+    ax2.set_zlabel('H')
+    ax2.set_title('Learned Hamiltonian')
+
+    # Set identical limits for both plots
+    for ax in [ax1, ax2]:
+        ax.set_zlim([h_min, h_max])
 
     plt.show()
+
+
+
