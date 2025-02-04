@@ -11,4 +11,4 @@ G = 9.81           # Gravity constant
 # p1: Momentum in x direction
 # p2: Momentum in y direction
 Y0 = [0.8, 0.0, 0.0, 0.0]  # Initial conditions [q1, q2, p1, p2]
-T_SPAN = (0, 500)           # Time range for the simulation
+T_SPAN = (0, 1)           # Time range for the simulation
